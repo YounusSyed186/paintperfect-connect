@@ -4,7 +4,13 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import {
+  BrowserRouter,
+  Routes,
+  Route,
+  Navigate,
+  useLocation,
+} from "react-router-dom";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
 import { AuthPage } from "./pages/AuthPage";
 import { Dashboard } from "./pages/Dashboard";
@@ -19,6 +25,18 @@ import { Navbar } from "@/components/layout/NavBarMain";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
+
+// Component to reload page on route change
+const ReloadOnRouteChange = () => {
+  const location = useLocation();
+  useEffect(() => {
+    // Skip reload on initial load
+    if (performance.getEntriesByType("navigation")[0].type !== "reload") {
+      window.location.reload();
+    }
+  }, [location.pathname]);
+  return null;
+};
 
 // AppContent Component
 const AppContent = ({
@@ -101,6 +119,7 @@ const App = () => {
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <BrowserRouter>
+          <ReloadOnRouteChange />
           <AuthProvider>
             <Toaster />
             <Sonner />
@@ -120,10 +139,7 @@ const App = () => {
               <Route path="/auth" element={<AuthPage />} />
 
               {/* Role-based Dashboard Redirect */}
-              <Route
-                path="/dashboard"
-                element={<Dashboard />}
-              />
+              <Route path="/dashboard" element={<Dashboard />} />
 
               {/* Protected Dashboards */}
               <Route
