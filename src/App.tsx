@@ -26,16 +26,33 @@ import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
-// Component to reload page on route change
-const ReloadOnRouteChange = () => {
+// Component to handle page transitions
+const PageTransition = ({ children }: { children: React.ReactNode }) => {
   const location = useLocation();
+  const [displayLocation, setDisplayLocation] = useState(location);
+  const [transitionStage, setTransitionStage] = useState("fadeIn");
+
   useEffect(() => {
-    // Skip reload on initial load
-    if (performance.getEntriesByType("navigation")[0].type !== "reload") {
-      window.location.reload();
+    if (location !== displayLocation) {
+      setTransitionStage("fadeOut");
     }
-  }, [location.pathname]);
-  return null;
+  }, [location, displayLocation]);
+
+  return (
+    <div
+      className={`${
+        transitionStage === "fadeOut" ? "animate-fade-out" : "animate-fade-in"
+      }`}
+      onAnimationEnd={() => {
+        if (transitionStage === "fadeOut") {
+          setTransitionStage("fadeIn");
+          setDisplayLocation(location);
+        }
+      }}
+    >
+      {children}
+    </div>
+  );
 };
 
 // AppContent Component
@@ -50,15 +67,18 @@ const AppContent = ({
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-900/20 via-blue-900/10 to-pink-900/20">
+        <div className="flex flex-col items-center space-y-4">
+          <div className="animate-spin rounded-full h-12 w-12 border-4 border-primary border-t-transparent"></div>
+          <p className="text-muted-foreground animate-pulse">Loading your creative space...</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <LandingPage /> {/* Always show landing page, even if logged in */}
+    <div className="min-h-screen bg-background page-transition">
+      <LandingPage />
     </div>
   );
 };
@@ -79,8 +99,11 @@ const ProtectedRoute = ({
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-900/20 via-blue-900/10 to-pink-900/20">
+        <div className="flex flex-col items-center space-y-4">
+          <div className="animate-spin rounded-full h-12 w-12 border-4 border-primary border-t-transparent"></div>
+          <p className="text-muted-foreground animate-pulse">Authenticating...</p>
+        </div>
       </div>
     );
   }
@@ -94,9 +117,11 @@ const ProtectedRoute = ({
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background page-transition">
       <Navbar isDarkMode={isDarkMode} toggleDarkMode={toggleDarkMode} />
-      {children}
+      <div className="pt-20">
+        {children}
+      </div>
     </div>
   );
 };
@@ -119,7 +144,6 @@ const App = () => {
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <BrowserRouter>
-          <ReloadOnRouteChange />
           <AuthProvider>
             <Toaster />
             <Sonner />
@@ -128,62 +152,112 @@ const App = () => {
               <Route
                 path="/"
                 element={
-                  <AppContent
-                    isDarkMode={isDarkMode}
-                    toggleDarkMode={toggleDarkMode}
-                  />
+                  <PageTransition>
+                    <AppContent
+                      isDarkMode={isDarkMode}
+                      toggleDarkMode={toggleDarkMode}
+                    />
+                  </PageTransition>
                 }
               />
 
               {/* Auth */}
-              <Route path="/auth" element={<AuthPage />} />
+              <Route 
+                path="/auth" 
+                element={
+                  <PageTransition>
+                    <AuthPage />
+                  </PageTransition>
+                } 
+              />
 
               {/* Role-based Dashboard Redirect */}
-              <Route path="/dashboard" element={<Dashboard />} />
+              <Route 
+                path="/dashboard" 
+                element={
+                  <PageTransition>
+                    <Dashboard />
+                  </PageTransition>
+                } 
+              />
 
               {/* Protected Dashboards */}
               <Route
                 path="/user/dashboard"
                 element={
-                  <ProtectedRoute
-                    allowedRoles={["user"]}
-                    isDarkMode={isDarkMode}
-                    toggleDarkMode={toggleDarkMode}
-                  >
-                    <UserDashboardPage />
-                  </ProtectedRoute>
+                  <PageTransition>
+                    <ProtectedRoute
+                      allowedRoles={["user"]}
+                      isDarkMode={isDarkMode}
+                      toggleDarkMode={toggleDarkMode}
+                    >
+                      <UserDashboardPage />
+                    </ProtectedRoute>
+                  </PageTransition>
                 }
               />
               <Route
                 path="/vendor/dashboard"
                 element={
-                  <ProtectedRoute
-                    allowedRoles={["vendor"]}
-                    isDarkMode={isDarkMode}
-                    toggleDarkMode={toggleDarkMode}
-                  >
-                    <VendorDashboardPage />
-                  </ProtectedRoute>
+                  <PageTransition>
+                    <ProtectedRoute
+                      allowedRoles={["vendor"]}
+                      isDarkMode={isDarkMode}
+                      toggleDarkMode={toggleDarkMode}
+                    >
+                      <VendorDashboardPage />
+                    </ProtectedRoute>
+                  </PageTransition>
                 }
               />
               <Route
                 path="/admin/dashboard"
                 element={
-                  <ProtectedRoute
-                    allowedRoles={["admin"]}
-                    isDarkMode={isDarkMode}
-                    toggleDarkMode={toggleDarkMode}
-                  >
-                    <AdminDashboardPage />
-                  </ProtectedRoute>
+                  <PageTransition>
+                    <ProtectedRoute
+                      allowedRoles={["admin"]}
+                      isDarkMode={isDarkMode}
+                      toggleDarkMode={toggleDarkMode}
+                    >
+                      <AdminDashboardPage />
+                    </ProtectedRoute>
+                  </PageTransition>
                 }
               />
 
               {/* Other Pages */}
-              <Route path="/about" element={<AboutPage />} />
-              <Route path="/gallery" element={<GalleryPage />} />
-              <Route path="/services" element={<ServicesPage />} />
-              <Route path="*" element={<NotFound />} />
+              <Route 
+                path="/about" 
+                element={
+                  <PageTransition>
+                    <AboutPage />
+                  </PageTransition>
+                } 
+              />
+              <Route 
+                path="/gallery" 
+                element={
+                  <PageTransition>
+                    <GalleryPage />
+                  </PageTransition>
+                } 
+              />
+              <Route 
+                path="/services" 
+                element={
+                  <PageTransition>
+                    <ServicesPage />
+                  </PageTransition>
+                } 
+              />
+              <Route 
+                path="*" 
+                element={
+                  <PageTransition>
+                    <NotFound />
+                  </PageTransition>
+                } 
+              />
             </Routes>
           </AuthProvider>
         </BrowserRouter>
