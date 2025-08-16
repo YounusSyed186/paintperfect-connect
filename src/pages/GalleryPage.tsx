@@ -6,6 +6,8 @@ import { Input } from '@/components/ui/input';
 import { Search, Filter, Heart, Eye, ShoppingCart } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Navbar } from '@/components/layout/NavBarMain'; // ✅ Import your navbar
+import { CreateRequestDialog } from '@/components/requests/CreateRequestDialog';
+import { useAuth } from '@/hooks/useAuth';
 
 const categories = ['All', 'Interior', 'Exterior', 'Commercial', 'Artistic', 'Restoration'];
 
@@ -15,6 +17,11 @@ export const GalleryPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [selectedDesignForRequest, setSelectedDesignForRequest] = useState<any | null>(null);
+  const { user } = useAuth();
+
+
 
   const [isDarkMode, setIsDarkMode] = useState(() => {
     const saved = localStorage.getItem('darkMode');
@@ -58,10 +65,26 @@ export const GalleryPage = () => {
     return matchesCategory && matchesSearch;
   });
 
-  const handleAddToCart = (item: any) => {
-    console.log('Added to cart:', item);
-    alert(`${item.title} has been added to your cart!`);
+  const handleAddToCart = async (item: any) => {
+    if (!user) {
+      alert('Please log in to add items to your cart.');
+      return;
+    }
+
+    const { error } = await supabase.from('cart_items').insert({
+      user_id: user.id,
+      design_id: item.id,
+      quantity: 1
+    });
+
+    if (error) {
+      console.error('Error adding to cart:', error);
+      alert('Failed to add to cart');
+    } else {
+      alert(`${item.title} has been added to your cart!`);
+    }
   };
+
 
   return (
     <div className="min-h-screen bg-background">
@@ -130,8 +153,16 @@ export const GalleryPage = () => {
 
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
                 {filteredItems.map((item) => (
-                  <Card key={item.id} className="overflow-hidden hover:shadow-lg transition-all duration-300 group">
-                    <div className="relative aspect-[4/3] overflow-hidden">
+                  <Card
+                    key={item.id}
+                    className="overflow-hidden hover:shadow-lg transition-all duration-300 group cursor-pointer"
+
+                  >
+
+                    <div className="relative aspect-[4/3] overflow-hidden" onClick={() => {
+                      setSelectedDesignForRequest(item);
+                      setShowCreateDialog(true);
+                    }}>
                       <img
                         src={item.image_url}
                         alt={item.title}
@@ -172,6 +203,15 @@ export const GalleryPage = () => {
           )}
         </div>
       </section>
+      <CreateRequestDialog
+        open={showCreateDialog}
+        onOpenChange={(open) => {
+          if (!open) setSelectedDesignForRequest(null);
+          setShowCreateDialog(open);
+        }}
+        selectedDesign={selectedDesignForRequest}
+      />
+
     </div>
   );
 };

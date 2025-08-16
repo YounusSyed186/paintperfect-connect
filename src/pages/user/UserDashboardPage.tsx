@@ -7,6 +7,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from '@/hooks/use-toast';
 import { CreateRequestDialog } from '@/components/requests/CreateRequestDialog';
+import { useNavigate } from 'react-router-dom';
 
 interface PaintingRequest {
   id: string;
@@ -23,9 +24,9 @@ interface PaintingRequest {
 
 export const UserDashboardPage = () => {
   const [requests, setRequests] = useState<PaintingRequest[]>([]);
-  const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
+  const nav = useNavigate()
 
   useEffect(() => {
     fetchRequests();
@@ -127,7 +128,7 @@ export const UserDashboardPage = () => {
             <p className="text-muted-foreground">Track and manage your painting requests</p>
           </div>
           <Button 
-            onClick={() => setShowCreateDialog(true)}
+            onClick={() => nav("/gallery")}
             size="lg"
             className="w-full sm:w-auto"
           >
@@ -194,7 +195,6 @@ export const UserDashboardPage = () => {
                 Create your first painting request to get started with transforming your space
               </p>
               <Button 
-                onClick={() => setShowCreateDialog(true)}
                 size="lg"
               >
                 <Plus className="mr-2 h-5 w-5" />
@@ -267,11 +267,6 @@ export const UserDashboardPage = () => {
           </div>
         )}
 
-        <CreateRequestDialog 
-          open={showCreateDialog} 
-          onOpenChange={setShowCreateDialog}
-          onRequestCreated={fetchRequests}
-        />
       </div>
     </div>
   );

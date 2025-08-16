@@ -31,14 +31,14 @@ interface Design {
 interface CreateRequestDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onRequestCreated: () => void;
+  selectedDesign: Design | null;
+  onRequestCreated?: () => void;
 }
 
-export const CreateRequestDialog = ({ open, onOpenChange, onRequestCreated }: CreateRequestDialogProps) => {
+export const CreateRequestDialog = ({ open, onOpenChange, onRequestCreated, selectedDesign }: CreateRequestDialogProps) => {
   const [categories, setCategories] = useState<Category[]>([]);
   const [pricing, setPricing] = useState<Pricing[]>([]);
   const [designs, setDesigns] = useState<Design[]>([]);
-  const [selectedDesign, setSelectedDesign] = useState<Design | null>(null);
   const [roomCounts, setRoomCounts] = useState<Record<string, number>>({});
   const [dimensions, setDimensions] = useState({ length: '', breadth: '' });
   const [loading, setLoading] = useState(false);
@@ -50,7 +50,6 @@ export const CreateRequestDialog = ({ open, onOpenChange, onRequestCreated }: Cr
     if (open) {
       fetchCategories();
       fetchPricing();
-      fetchDesigns();
     }
   }, [open]);
 
@@ -220,7 +219,6 @@ export const CreateRequestDialog = ({ open, onOpenChange, onRequestCreated }: Cr
   const resetForm = () => {
     setRoomCounts({});
     setDimensions({ length: '', breadth: '' });
-    setSelectedDesign(null);
     setDimensionImageFile(null);
     setDimensionImagePreview('');
   };
@@ -241,7 +239,6 @@ export const CreateRequestDialog = ({ open, onOpenChange, onRequestCreated }: Cr
               <Card
                 key={design.id}
                 className={`cursor-pointer transition-all border-2 ${selectedDesign?.id === design.id ? 'border-primary' : 'border-transparent'}`}
-                onClick={() => setSelectedDesign(design)}
               >
                 <img src={design.image_url} alt={design.title} className="h-40 w-full object-cover rounded-t-md" />
                 <CardContent>

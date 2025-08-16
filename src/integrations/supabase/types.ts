@@ -7,7 +7,7 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instanciate createClient with right options
+  // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "12.2.12 (cd3cf9e)"
@@ -118,7 +118,6 @@ export type Database = {
           dimensions: Json | null
           estimated_cost: number | null
           id: string
-          room_photo_url: string | null
           room_types: Json
           status: Database["public"]["Enums"]["request_status"] | null
           updated_at: string | null
@@ -131,7 +130,6 @@ export type Database = {
           dimensions?: Json | null
           estimated_cost?: number | null
           id?: string
-          room_photo_url?: string | null
           room_types: Json
           status?: Database["public"]["Enums"]["request_status"] | null
           updated_at?: string | null
@@ -144,7 +142,6 @@ export type Database = {
           dimensions?: Json | null
           estimated_cost?: number | null
           id?: string
-          room_photo_url?: string | null
           room_types?: Json
           status?: Database["public"]["Enums"]["request_status"] | null
           updated_at?: string | null
@@ -153,7 +150,7 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "fk_user_profile"
+            foreignKeyName: "fk_user"
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
@@ -208,14 +205,12 @@ export type Database = {
           created_at: string | null
           id: string
           is_approved: boolean | null
-          isapproved: boolean | null
           name: string
           profile_image: string | null
           role: Database["public"]["Enums"]["app_role"]
           updated_at: string | null
           user_id: string
           vendor_request_id: string | null
-          vendorRequest: string | null
         }
         Insert: {
           approved_at?: string | null
@@ -224,14 +219,12 @@ export type Database = {
           created_at?: string | null
           id?: string
           is_approved?: boolean | null
-          isapproved?: boolean | null
           name: string
           profile_image?: string | null
           role?: Database["public"]["Enums"]["app_role"]
           updated_at?: string | null
           user_id: string
           vendor_request_id?: string | null
-          vendorRequest?: string | null
         }
         Update: {
           approved_at?: string | null
@@ -240,14 +233,12 @@ export type Database = {
           created_at?: string | null
           id?: string
           is_approved?: boolean | null
-          isapproved?: boolean | null
           name?: string
           profile_image?: string | null
           role?: Database["public"]["Enums"]["app_role"]
           updated_at?: string | null
           user_id?: string
           vendor_request_id?: string | null
-          vendorRequest?: string | null
         }
         Relationships: []
       }

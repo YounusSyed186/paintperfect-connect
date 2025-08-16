@@ -23,6 +23,7 @@ import { GalleryPage } from "./pages/GalleryPage";
 import { ServicesPage } from "./pages/ServicesPage";
 import { Navbar } from "@/components/layout/NavBarMain";
 import NotFound from "./pages/NotFound";
+import CartPage from "./pages/cart/CartPage";
 
 const queryClient = new QueryClient();
 
@@ -40,9 +41,8 @@ const PageTransition = ({ children }: { children: React.ReactNode }) => {
 
   return (
     <div
-      className={`${
-        transitionStage === "fadeOut" ? "animate-fade-out" : "animate-fade-in"
-      }`}
+      className={`${transitionStage === "fadeOut" ? "animate-fade-out" : "animate-fade-in"
+        }`}
       onAnimationEnd={() => {
         if (transitionStage === "fadeOut") {
           setTransitionStage("fadeIn");
@@ -70,7 +70,9 @@ const AppContent = ({
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-900/20 via-blue-900/10 to-pink-900/20">
         <div className="flex flex-col items-center space-y-4">
           <div className="animate-spin rounded-full h-12 w-12 border-4 border-primary border-t-transparent"></div>
-          <p className="text-muted-foreground animate-pulse">Loading your creative space...</p>
+          <p className="text-muted-foreground animate-pulse">
+            Loading your creative space...
+          </p>
         </div>
       </div>
     );
@@ -102,7 +104,9 @@ const ProtectedRoute = ({
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-900/20 via-blue-900/10 to-pink-900/20">
         <div className="flex flex-col items-center space-y-4">
           <div className="animate-spin rounded-full h-12 w-12 border-4 border-primary border-t-transparent"></div>
-          <p className="text-muted-foreground animate-pulse">Authenticating...</p>
+          <p className="text-muted-foreground animate-pulse">
+            Authenticating...
+          </p>
         </div>
       </div>
     );
@@ -119,9 +123,7 @@ const ProtectedRoute = ({
   return (
     <div className="min-h-screen bg-background page-transition">
       <Navbar isDarkMode={isDarkMode} toggleDarkMode={toggleDarkMode} />
-      <div className="pt-20">
-        {children}
-      </div>
+      <div className="pt-20">{children}</div>
     </div>
   );
 };
@@ -162,23 +164,23 @@ const App = () => {
               />
 
               {/* Auth */}
-              <Route 
-                path="/auth" 
+              <Route
+                path="/auth"
                 element={
                   <PageTransition>
                     <AuthPage />
                   </PageTransition>
-                } 
+                }
               />
 
               {/* Role-based Dashboard Redirect */}
-              <Route 
-                path="/dashboard" 
+              <Route
+                path="/dashboard"
                 element={
                   <PageTransition>
                     <Dashboard />
                   </PageTransition>
-                } 
+                }
               />
 
               {/* Protected Dashboards */}
@@ -226,37 +228,39 @@ const App = () => {
               />
 
               {/* Other Pages */}
-              <Route 
-                path="/about" 
+              <Route
+                path="/about-us"
                 element={
                   <PageTransition>
                     <AboutPage />
                   </PageTransition>
-                } 
+                }
               />
-              <Route 
-                path="/gallery" 
+              <Route
+                path="/gallery"
                 element={
                   <PageTransition>
                     <GalleryPage />
                   </PageTransition>
-                } 
+                }
               />
-              <Route 
-                path="/services" 
+              <Route path="/cart" element={<PageTransition><CartPage /></PageTransition>} />
+
+              <Route
+                path="/services"
                 element={
                   <PageTransition>
                     <ServicesPage />
                   </PageTransition>
-                } 
+                }
               />
-              <Route 
-                path="*" 
+              <Route
+                path="*"
                 element={
                   <PageTransition>
                     <NotFound />
                   </PageTransition>
-                } 
+                }
               />
             </Routes>
           </AuthProvider>

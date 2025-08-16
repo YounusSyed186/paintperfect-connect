@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -7,6 +7,8 @@ import { Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { Navbar } from '@/components/layout/NavBarMain';
+import { useInView } from 'react-intersection-observer';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface Design {
   id: string;
@@ -52,40 +54,99 @@ const features = [
   }
 ];
 
+// Animation variants
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.1,
+      when: "beforeChildren"
+    }
+  }
+};
+
+const itemVariants = {
+  hidden: { y: 20, opacity: 0 },
+  visible: {
+    y: 0,
+    opacity: 1,
+    transition: {
+      duration: 0.5,
+      ease: [0.16, 1, 0.3, 1]
+    }
+  }
+};
+
+const fadeInVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      duration: 0.8,
+      ease: [0.16, 1, 0.3, 1]
+    }
+  }
+};
+
 export const LandingPage = () => {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [featuredDesigns, setFeaturedDesigns] = useState<Design[]>([]);
   const [allDesigns, setAllDesigns] = useState<Design[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isMounted, setIsMounted] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(() => {
-    const saved = localStorage.getItem('darkMode');
-    return saved ? JSON.parse(saved) : false;
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('darkMode');
+      return saved ? JSON.parse(saved) : false;
+    }
+    return false;
   });
 
-  useEffect(() => {
-    fetchDesigns();
-  }, []);
+  // Intersection observers for scroll animations
+  const [heroRef, heroInView] = useInView({
+    triggerOnce: true,
+    threshold: 0.1,
+    rootMargin: '-50px 0px'
+  });
 
-  useEffect(() => {
-    localStorage.setItem('darkMode', JSON.stringify(isDarkMode));
-    if (isDarkMode) {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
-  }, [isDarkMode]);
+  const [featuresRef, featuresInView] = useInView({
+    triggerOnce: true,
+    threshold: 0.1,
+    rootMargin: '-50px 0px'
+  });
 
-  const fetchDesigns = async () => {
+  const [designsRef, designsInView] = useInView({
+    triggerOnce: true,
+    threshold: 0.1,
+    rootMargin: '-50px 0px'
+  });
+
+  const [aboutRef, aboutInView] = useInView({
+    triggerOnce: true,
+    threshold: 0.1,
+    rootMargin: '-50px 0px'
+  });
+
+  const [ctaRef, ctaInView] = useInView({
+    triggerOnce: true,
+    threshold: 0.1,
+    rootMargin: '-50px 0px'
+  });
+
+  const fetchDesigns = useCallback(async () => {
     try {
+      setLoading(true);
       const { data, error } = await supabase
         .from('painting_designs')
         .select('*')
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .limit(6);
 
       if (error) throw error;
 
       setAllDesigns(data || []);
-      setFeaturedDesigns((data || []).slice(0, 6));
+      setFeaturedDesigns(data || []);
     } catch (error: any) {
       toast({
         title: 'Error',
@@ -95,40 +156,111 @@ export const LandingPage = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    setIsMounted(true);
+    fetchDesigns();
+  }, [fetchDesigns]);
+
+  useEffect(() => {
+    if (isMounted) {
+      localStorage.setItem('darkMode', JSON.stringify(isDarkMode));
+      if (isDarkMode) {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+    }
+  }, [isDarkMode, isMounted]);
 
   const toggleDarkMode = () => {
     setIsDarkMode(!isDarkMode);
   };
 
-  const nextSlide = () => {
+  const nextSlide = useCallback(() => {
     setCurrentSlide((prev) => (prev + 1) % featuredDesigns.length);
+  }, [featuredDesigns.length]);
+
+  const prevSlide = useCallback(() => {
+    setCurrentSlide((prev) => (prev - 1 + featuredDesigns.length) % featuredDesigns.length);
+  }, [featuredDesigns.length]);
+
+  // Smooth scroll to sections
+  const scrollToSection = (id: string) => {
+    const element = document.getElementById(id);
+    if (element) {
+      element.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start'
+      });
+    }
   };
 
-  const prevSlide = () => {
-    setCurrentSlide((prev) => (prev - 1 + featuredDesigns.length) % featuredDesigns.length);
-  };
+  if (!isMounted) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-background text-foreground page-transition">
+    <div className="min-h-screen bg-background text-foreground">
       {/* Header/Navbar */}
-      <Navbar isDarkMode={isDarkMode} toggleDarkMode={toggleDarkMode}/>
+      <Navbar isDarkMode={isDarkMode} toggleDarkMode={toggleDarkMode} scrollToSection={scrollToSection} />
 
       {/* Hero Section */}
-      <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
+      <section 
+        id="home"
+        ref={heroRef}
+        className="relative min-h-screen flex items-center justify-center overflow-hidden mt-16"
+      >
         {/* Background with gradient overlay */}
         <div className="absolute inset-0 bg-gradient-to-br from-purple-900/20 via-blue-900/10 to-pink-900/20"></div>
         
         {/* Animated background elements */}
         <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute -top-40 -right-40 w-80 h-80 bg-purple-500/10 rounded-full blur-3xl animate-float"></div>
-          <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-blue-500/10 rounded-full blur-3xl animate-float" style={{animationDelay: '2s'}}></div>
+          <motion.div 
+            className="absolute -top-40 -right-40 w-80 h-80 bg-purple-500/10 rounded-full blur-3xl"
+            initial={{ opacity: 0 }}
+            animate={heroInView ? {
+              opacity: 1,
+              y: [0, -20, 0],
+              x: [0, 20, 0],
+            } : {}}
+            transition={{
+              duration: 8,
+              repeat: Infinity,
+              ease: "easeInOut"
+            }}
+          ></motion.div>
+          <motion.div 
+            className="absolute -bottom-40 -left-40 w-80 h-80 bg-blue-500/10 rounded-full blur-3xl"
+            initial={{ opacity: 0 }}
+            animate={heroInView ? {
+              opacity: 1,
+              y: [0, 20, 0],
+              x: [0, -20, 0],
+            } : {}}
+            transition={{
+              duration: 10,
+              repeat: Infinity,
+              ease: "easeInOut",
+              delay: 2
+            }}
+          ></motion.div>
         </div>
 
         <div className="container mx-auto px-4 relative z-10">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
-            <div className="space-y-8 animate-slide-in-left">
-              <div className="space-y-6">
+            <motion.div 
+              className="space-y-8"
+              initial="hidden"
+              animate={heroInView ? "visible" : "hidden"}
+              variants={containerVariants}
+            >
+              <motion.div className="space-y-6" variants={itemVariants}>
                 <div className="inline-flex items-center px-4 py-2 bg-primary/10 rounded-full border border-primary/20">
                   <Sparkles className="w-4 h-4 text-primary mr-2" />
                   <span className="text-sm font-medium text-primary">Transform Your Space Today</span>
@@ -143,9 +275,9 @@ export const LandingPage = () => {
                 <p className="text-xl text-muted-foreground max-w-lg leading-relaxed">
                   Transform your space with professional painting services. From interior design to exterior makeovers, we bring your vision to life with premium quality and expert craftsmanship.
                 </p>
-              </div>
+              </motion.div>
 
-              <div className="flex flex-col sm:flex-row gap-4">
+              <motion.div className="flex flex-col sm:flex-row gap-4" variants={itemVariants}>
                 <Link to="/auth">
                   <Button size="lg" className="gradient-primary hover:opacity-90 text-white font-semibold px-8 py-4 hover-lift">
                     Get Started
@@ -157,31 +289,57 @@ export const LandingPage = () => {
                     View Gallery
                   </Button>
                 </Link>
-              </div>
+              </motion.div>
 
               {/* Stats */}
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 pt-8">
+              <motion.div 
+                className="grid grid-cols-2 lg:grid-cols-4 gap-6 pt-8"
+                variants={containerVariants}
+              >
                 {stats.map((stat, index) => (
-                  <div key={index} className="text-center animate-scale-in" style={{animationDelay: `${index * 0.1}s`}}>
+                  <motion.div 
+                    key={index} 
+                    className="text-center"
+                    variants={itemVariants}
+                    custom={index}
+                  >
                     <div className={`text-3xl font-bold ${stat.color}`}>{stat.value}</div>
                     <div className="text-sm text-muted-foreground">{stat.label}</div>
-                  </div>
+                  </motion.div>
                 ))}
-              </div>
-            </div>
+              </motion.div>
+            </motion.div>
 
-            <div className="relative animate-slide-in-right">
+            <motion.div 
+              className="relative"
+              initial={{ opacity: 0, x: 50 }}
+              animate={heroInView ? { opacity: 1, x: 0 } : {}}
+              transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+            >
               <div className="relative h-96 lg:h-[600px] overflow-hidden rounded-2xl shadow-2xl">
                 <img
-                  src="https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=800"
+                  src="https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=800&auto=format&fit=crop&q=80"
                   alt="Beautiful painted room"
                   className="w-full h-full object-cover"
+                  loading="eager"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
               </div>
 
               {/* Floating cards */}
-              <div className="absolute -bottom-6 -left-6 glass-effect rounded-xl p-4 shadow-xl animate-float">
+              <motion.div 
+                className="absolute -bottom-6 -left-6 glass-effect rounded-xl p-4 shadow-xl"
+                initial={{ opacity: 0 }}
+                animate={heroInView ? {
+                  opacity: 1,
+                  y: [0, -10, 0]
+                } : {}}
+                transition={{
+                  duration: 4,
+                  repeat: Infinity,
+                  ease: "easeInOut"
+                }}
+              >
                 <div className="flex items-center space-x-3">
                   <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-lg flex items-center justify-center">
                     <Home className="h-6 w-6 text-white" />
@@ -191,9 +349,22 @@ export const LandingPage = () => {
                     <div className="text-sm text-gray-300">Premium Quality</div>
                   </div>
                 </div>
-              </div>
+              </motion.div>
 
-              <div className="absolute -top-6 -right-6 glass-effect rounded-xl p-4 shadow-xl animate-float" style={{animationDelay: '1s'}}>
+              <motion.div 
+                className="absolute -top-6 -right-6 glass-effect rounded-xl p-4 shadow-xl"
+                initial={{ opacity: 0 }}
+                animate={heroInView ? {
+                  opacity: 1,
+                  y: [0, -15, 0]
+                } : {}}
+                transition={{
+                  duration: 5,
+                  repeat: Infinity,
+                  ease: "easeInOut",
+                  delay: 1
+                }}
+              >
                 <div className="flex items-center space-x-3">
                   <div className="w-12 h-12 bg-gradient-to-r from-green-500 to-emerald-500 rounded-lg flex items-center justify-center">
                     <Building className="h-6 w-6 text-white" />
@@ -203,97 +374,145 @@ export const LandingPage = () => {
                     <div className="text-sm text-gray-300">Weather Resistant</div>
                   </div>
                 </div>
-              </div>
-            </div>
+              </motion.div>
+            </motion.div>
           </div>
         </div>
       </section>
 
       {/* Features Section */}
-      <section className="py-20 bg-muted/30">
+      <section 
+        id="services"
+        ref={featuresRef}
+        className="py-20 bg-muted/30"
+      >
         <div className="container mx-auto px-4">
-          <div className="text-center mb-16 animate-slide-up">
+          <motion.div 
+            className="text-center mb-16"
+            initial="hidden"
+            animate={featuresInView ? "visible" : "hidden"}
+            variants={fadeInVariants}
+          >
             <h2 className="text-4xl font-bold mb-4">Our Services</h2>
             <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
               Professional painting solutions tailored to meet your unique needs and exceed your expectations
             </p>
-          </div>
+          </motion.div>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+          <motion.div 
+            className="grid md:grid-cols-2 lg:grid-cols-4 gap-8"
+            initial="hidden"
+            animate={featuresInView ? "visible" : "hidden"}
+            variants={containerVariants}
+          >
             {features.map((feature, index) => (
-              <Card key={index} className="group hover:shadow-xl transition-all-smooth hover-lift border-0 bg-gradient-to-br from-background to-muted/50 animate-scale-in" style={{animationDelay: `${index * 0.1}s`}}>
-                <CardContent className="p-6 text-center">
-                  <div className={`w-16 h-16 mx-auto mb-4 bg-gradient-to-r ${feature.gradient} rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform-smooth`}>
-                    <feature.icon className="h-8 w-8 text-white" />
-                  </div>
-                  <h3 className="text-xl font-semibold mb-2">{feature.title}</h3>
-                  <p className="text-muted-foreground text-sm leading-relaxed">{feature.description}</p>
-                </CardContent>
-              </Card>
+              <motion.div key={index} variants={itemVariants}>
+                <Card className="group hover:shadow-xl transition-all duration-300 ease-in-out hover:-translate-y-1 border-0 bg-gradient-to-br from-background to-muted/50">
+                  <CardContent className="p-6 text-center">
+                    <div className={`w-16 h-16 mx-auto mb-4 bg-gradient-to-r ${feature.gradient} rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300`}>
+                      <feature.icon className="h-8 w-8 text-white" />
+                    </div>
+                    <h3 className="text-xl font-semibold mb-2">{feature.title}</h3>
+                    <p className="text-muted-foreground text-sm leading-relaxed">{feature.description}</p>
+                  </CardContent>
+                </Card>
+              </motion.div>
             ))}
-          </div>
+          </motion.div>
         </div>
       </section>
 
       {/* Featured Designs Section */}
-      {featuredDesigns.length > 0 && (
-        <section className="py-20">
-          <div className="container mx-auto px-4">
-            <div className="text-center mb-16 animate-slide-up">
-              <h2 className="text-4xl font-bold mb-4">Featured Design Collections</h2>
-              <p className="text-xl text-muted-foreground">Discover our most popular painting transformations</p>
-            </div>
+      <AnimatePresence>
+        {featuredDesigns.length > 0 && (
+          <section 
+            id="gallery"
+            ref={designsRef}
+            className="py-20"
+          >
+            <div className="container mx-auto px-4">
+              <motion.div 
+                className="text-center mb-16"
+                initial="hidden"
+                animate={designsInView ? "visible" : "hidden"}
+                variants={fadeInVariants}
+              >
+                <h2 className="text-4xl font-bold mb-4">Featured Design Collections</h2>
+                <p className="text-xl text-muted-foreground">Discover our most popular painting transformations</p>
+              </motion.div>
 
-            <div className="relative">
-              <div className="flex items-center justify-between mb-8">
-                <h3 className="text-2xl font-semibold">Latest Designs</h3>
-                {featuredDesigns.length > 3 && (
-                  <div className="flex space-x-2">
-                    <Button variant="outline" size="sm" onClick={prevSlide} className="hover-lift">
-                      <ChevronLeft className="h-4 w-4" />
-                    </Button>
-                    <Button variant="outline" size="sm" onClick={nextSlide} className="hover-lift">
-                      <ChevronRight className="h-4 w-4" />
-                    </Button>
-                  </div>
-                )}
-              </div>
-
-              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-                {featuredDesigns.slice(0, 6).map((design, index) => (
-                  <Card key={design.id} className="overflow-hidden hover:shadow-xl transition-all-smooth hover-lift group animate-scale-in" style={{animationDelay: `${index * 0.1}s`}}>
-                    <div className="aspect-[4/3] overflow-hidden relative">
-                      <img
-                        src={design.image_url}
-                        alt={design.title}
-                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                      <Badge className="absolute top-3 left-3 bg-background/90 backdrop-blur-sm">{design.category}</Badge>
+              <div className="relative">
+                <div className="flex items-center justify-between mb-8">
+                  <h3 className="text-2xl font-semibold">Latest Designs</h3>
+                  {featuredDesigns.length > 3 && (
+                    <div className="flex space-x-2">
+                      <Button variant="outline" size="sm" onClick={prevSlide} className="hover-lift">
+                        <ChevronLeft className="h-4 w-4" />
+                      </Button>
+                      <Button variant="outline" size="sm" onClick={nextSlide} className="hover-lift">
+                        <ChevronRight className="h-4 w-4" />
+                      </Button>
                     </div>
-                    <CardContent className="p-6">
-                      <h3 className="font-semibold text-lg mb-2">{design.title}</h3>
-                      <div className="flex flex-wrap gap-1">
-                        {design.tags.slice(0, 3).map((tag, index) => (
-                          <Badge key={index} variant="outline" className="text-xs">
-                            {tag}
-                          </Badge>
-                        ))}
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+                  )}
+                </div>
+
+                <motion.div 
+                  className="grid md:grid-cols-2 lg:grid-cols-3 gap-8"
+                  initial="hidden"
+                  animate={designsInView ? "visible" : "hidden"}
+                  variants={containerVariants}
+                >
+                  {featuredDesigns.map((design, index) => (
+                    <motion.div 
+                      key={design.id} 
+                      variants={itemVariants}
+                      layout
+                    >
+                      <Card className="overflow-hidden hover:shadow-xl transition-all duration-300 ease-in-out hover:-translate-y-1 group">
+                        <div className="aspect-[4/3] overflow-hidden relative">
+                          <img
+                            src={design.image_url}
+                            alt={design.title}
+                            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                            loading="lazy"
+                          />
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                          <Badge className="absolute top-3 left-3 bg-background/90 backdrop-blur-sm">{design.category}</Badge>
+                        </div>
+                        <CardContent className="p-6">
+                          <h3 className="font-semibold text-lg mb-2">{design.title}</h3>
+                          <div className="flex flex-wrap gap-1">
+                            {design.tags.slice(0, 3).map((tag, index) => (
+                              <Badge key={index} variant="outline" className="text-xs">
+                                {tag}
+                              </Badge>
+                            ))}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </motion.div>
+                  ))}
+                </motion.div>
               </div>
             </div>
-          </div>
-        </section>
-      )}
+          </section>
+        )}
+      </AnimatePresence>
 
       {/* About Section */}
-      <section className="py-20 bg-muted/30">
+      <section 
+        id="about"
+        ref={aboutRef}
+        className="py-20 bg-muted/30"
+      >
         <div className="container mx-auto px-4">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
-            <div className="space-y-6 animate-slide-in-left">
+            <motion.div 
+              className="space-y-6"
+              initial={{ opacity: 0, x: -50 }}
+              animate={aboutInView ? { opacity: 1, x: 0 } : {}}
+              transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+            >
               <h2 className="text-4xl font-bold">About PaintPerfect</h2>
               <div className="space-y-4 text-lg text-muted-foreground leading-relaxed">
                 <p>
@@ -316,45 +535,60 @@ export const LandingPage = () => {
                   <div className="text-muted-foreground">Certified painters with years of experience</div>
                 </div>
               </div>
-            </div>
+            </motion.div>
 
-            <div className="relative animate-slide-in-right">
+            <motion.div 
+              className="relative"
+              initial={{ opacity: 0, x: 50 }}
+              animate={aboutInView ? { opacity: 1, x: 0 } : {}}
+              transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+            >
               <img
-                src="https://images.unsplash.com/photo-1581090464777-f3220bbe1b8b?w=600"
+                src="https://images.unsplash.com/photo-1581090464777-f3220bbe1b8b?w=600&auto=format&fit=crop&q=80"
                 alt="Our painting team at work"
                 className="w-full h-96 object-cover rounded-2xl shadow-2xl"
+                loading="lazy"
               />
               <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-transparent rounded-2xl" />
-            </div>
+            </motion.div>
           </div>
         </div>
       </section>
 
       {/* CTA Section */}
-      <section className="py-20">
+      <section 
+        ref={ctaRef}
+        className="py-20"
+      >
         <div className="container mx-auto px-4">
-          <Card className="relative overflow-hidden bg-gradient-to-r from-primary via-purple-600 to-pink-600 border-0 animate-scale-in">
-            <div className="absolute inset-0 bg-black/20"></div>
-            <CardContent className="relative z-10 p-12 text-center text-white">
-              <h2 className="text-4xl font-bold mb-4">Ready to Transform Your Space?</h2>
-              <p className="text-xl mb-8 max-w-2xl mx-auto opacity-90">
-                Get started with a free consultation and let our experts bring your vision to life with professional painting services.
-              </p>
-              <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <Link to="/auth">
-                  <Button size="lg" variant="secondary" className="px-8 py-4 hover-lift">
-                    Start Your Project
-                    <ArrowRight className="ml-2 h-5 w-5" />
-                  </Button>
-                </Link>
-                <Link to="/services">
-                  <Button size="lg" variant="outline" className="px-8 py-4 border-white text-white hover:bg-white hover:text-primary hover-lift">
-                    View Services
-                  </Button>
-                </Link>
-              </div>
-            </CardContent>
-          </Card>
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={ctaInView ? { opacity: 1, scale: 1 } : {}}
+            transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+          >
+            <Card className="relative overflow-hidden bg-gradient-to-r from-primary via-purple-600 to-pink-600 border-0">
+              <div className="absolute inset-0 bg-black/20"></div>
+              <CardContent className="relative z-10 p-12 text-center text-white">
+                <h2 className="text-4xl font-bold mb-4">Ready to Transform Your Space?</h2>
+                <p className="text-xl mb-8 max-w-2xl mx-auto opacity-90">
+                  Get started with a free consultation and let our experts bring your vision to life with professional painting services.
+                </p>
+                <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                  <Link to="/auth">
+                    <Button size="lg" variant="secondary" className="px-8 py-4 hover:-translate-y-1 transition-transform duration-300">
+                      Start Your Project
+                      <ArrowRight className="ml-2 h-5 w-5" />
+                    </Button>
+                  </Link>
+                  <Link to="/services">
+                    <Button size="lg" variant="outline" className="px-8 py-4 border-white text-white hover:bg-white hover:text-primary hover:-translate-y-1 transition-transform duration-300">
+                      View Services
+                    </Button>
+                  </Link>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
         </div>
       </section>
 
